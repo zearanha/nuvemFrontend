@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import api from "./server/api";
+import { AxiosError } from "axios";
 import {
   Box,
   Stack,
@@ -97,11 +98,15 @@ export default function App() {
     e.preventDefault();
     if (!newProductName.trim() || !newProductCategory) return;
     try {
-      const response = await api.post("/products", {
+      const payload = {
         name: newProductName.trim(),
-        category: newProductCategory,
-      });
-      setProducts([...products, response.data]);
+        // enviar id como number — muitos backends esperam um inteiro
+        category: Number(newProductCategory),
+      };
+      console.log("POST /products payload:", payload);
+      const response = await api.post("/products", payload);
+      console.log("POST /products response:", response);
+      setProducts((prev) => [...prev, response.data]);
       setNewProductName("");
       setNewProductCategory("");
       toast({
@@ -110,15 +115,20 @@ export default function App() {
         duration: 3000,
         isClosable: true,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro ao adicionar produto:", err);
+      // Mostrar detalhes se disponíveis
+      const axiosErr = err as AxiosError<unknown> | undefined;
+      const status = axiosErr?.response?.status;
+      const data = axiosErr?.response?.data;
       toast({
         title: "Erro ao adicionar produto.",
-        description: "Verifique o console para mais detalhes.",
+        description: status ? `Status ${status}` : "Verifique o console para mais detalhes.",
         status: "error",
-        duration: 4000,
+        duration: 6000,
         isClosable: true,
       });
+      if (data) console.error("Response data:", data);
     }
   }
 
